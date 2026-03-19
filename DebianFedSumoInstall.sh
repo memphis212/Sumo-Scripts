@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Sumo Logic Installed Collector installer for Debian/Ubuntu
+# Usage:
+#   sudo ./install_sumo_deb.sh
+# To get the install token go to service.sumologic.com then administration then installation tokens. To decode the token "echo 'TOKEN_HERE' | base64 -d"
+#the decoded token will be before the https://
+# Before running, update DECODED_TOKEN_HERE.
+
+SUMO_DEB_URL="https://download-collector.fed.sumologic.com/rest/download/deb/64"
+SUMO_DEB_PATH="/tmp/SumoCollector.deb"
+SUMO_INSTALL_DIR="/opt/SumoCollector"
+SUMO_CONFIG_DIR="${SUMO_INSTALL_DIR}/config"
+SUMO_USER_PROPERTIES="${SUMO_CONFIG_DIR}/user.properties"
+
+# Set these from your decoded installation token output
+TOKEN_VALUE="DECODED_TOKEN_HERE"
+URL_VALUE="https://collectors.fed.sumologic.com"
+
+# Optional collector name. Hostname is a good default for client rollouts.
+COLLECTOR_NAME="$(hostname)"
+
+echo "[1/5] Downloading Sumo Collector DEB..."
+curl -fL -o "${SUMO_DEB_PATH}" "${SUMO_DEB_URL}"
+
+
+echo "[2/5] Installing package..."
+dpkg -i "${SUMO_DEB_PATH}" || apt-get install -f -y
+
+echo "[3/5] Writing ${SUMO_USER_PROPERTIES} ..."
+install -d -m 0750 "${SUMO_CONFIG_DIR}"
+
+cat > "${SUMO_USER_PROPERTIES}" <<EOF
+name=${COLLECTOR_NAME}
+url=${URL_VALUE}
+token=${TOKEN_VALUE}
+EOF
+
+# Tighten permissions
+chmod 640 "${SUMO_USER_PROPERTIES}"
+
+# ===== FIPS ENABLE =====
+ENABLE_FIPS="true"
+
+if [ "${ENABLE_FIPS}" = "true" ]; then
+  echo "[4/5] Enabling FIPS mode..."
+
+  if [ -f "/opt/SumoCollector/script/configureFipsMode.sh" ]; then
+    bash /opt/SumoCollector/script/configureFipsMode.sh
+  else
+    echo "[FIPS] ERROR: FIPS script not found"
+    exit 1
+  fi
+fi
+# =======================
+
+echo "[5/5] Restarting collector service..."
+systemctl enable collector
+systemctl restart collector
+
+
+echo
+echo "Done."
+echo "Collector name: ${COLLECTOR_NAME}"
