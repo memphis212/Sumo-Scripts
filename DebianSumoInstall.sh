@@ -1,13 +1,11 @@
-# To get the install token go to service.sumologic.com then administration then installation tokens. To decode the token "echo 'TOKEN_HERE' | base64 -d"
-#the decoded token will be before the https://
-
 #!/usr/bin/env bash
 set -euo pipefail
 
 # Sumo Logic Installed Collector installer for Debian/Ubuntu
 # Usage:
 #   sudo ./install_sumo_deb.sh
-#
+# To get the install token go to service.sumologic.com then administration then installation tokens. To decode the token "echo 'TOKEN_HERE' | base64 -d"
+#the decoded token will be before the https://
 # Before running, update DECODED_TOKEN_HERE.
 
 SUMO_DEB_URL="https://collectors.sumologic.com/rest/download/deb/64"
